@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Search Game</title>
+  <!-- <link rel="stylesheet" href="style.css"> -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<style>
+    body {
+        font-family: 'Press Start 2P', sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #1a1a1a;
+        color: white;
+        flex-direction: column;
+      }
+      
+      .card {
+        text-align: center;
+        background-color: #282c34;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      }
+      
+      .card h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+      }
+      
+      .card ul {
+        text-align: left;
+        margin-top: 10px;
+        list-style: none;
+        padding: 0;
+      }
+      
+      .card ul li {
+        font-size: 1rem;
+        margin: 5px 0;
+      }
+      
+      .hidden {
+        display: none;
+      }
+      
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(10, 40px);
+        gap: 2px;
+        margin-top: 20px;
+      }
+      
+      .grid div {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: 1px solid #444;
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        background-color: #333;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      
+      .grid div.selected {
+        background-color: #555;
+      }
+      
+      .grid div.correct {
+        background-color: #28a745;
+      }
+      
+      .grid div.wrong {
+        background-color: #dc3545;
+      }
+      
+      .win-message {
+        margin-top: 20px;
+        font-size: 1.5rem;
+        color: #28a745;
+        text-align: center;
+      }
+      
+</style>
+<body>
+  <div id="instructions" class="card">
+    <h1>Instructions</h1>
+    <p>Remember these substitution rules to solve the word scratch:</p>
+    <ul>
+      <li>R → E</li>
+      <li>F → I</li>
+      <li>H → K</li>
+      <li>L → Q</li>
+      <li>N → T</li>
+    </ul>
+    <p>Game starts in <span id="timer">10</span> seconds</p>
+  </div>
+
+  <div id="game-container" class="hidden">
+    <h2>Find Marvel Characters</h2>
+    <div id="word-grid" class="grid"></div>
+    <div id="win-message" class="win-message"></div>
+  </div>
+
+  <!-- <script src="script.js"></script> -->
+   
+</body>
+
+<script>
+    const wordsPool = ["ironman", "thor", "hulk", "spiderman", "loki", "wanda", "vision", "hawkeye", "thanos", "blackwidow"];
+    let words = [];
+    let foundWords = new Set();
+    let selectedCells = [];
+    let isMouseDown = false;
+    
+    const substitutionRules = {
+      r: "e",
+      f: "i",
+      h: "k",
+      l: "q",
+      n: "t"
+    };
+    
+    const countdownCard = document.getElementById('countdown-card');
+    const gameContainer = document.getElementById('game-container');
+    const instructions = document.getElementById('instructions');
+    const timer = document.getElementById('timer');
+    const wordGrid = document.getElementById('word-grid');
+    let countdown = 15;
+    
+    const interval = setInterval(() => {
+      timer.textContent = countdown;
+      if (countdown === 0) {
+        clearInterval(interval);
+        instructions.classList.add('hidden');
+        gameContainer.classList.remove('hidden');
+        setupGame();
+      }
+      countdown--; 
+    }, 1000);
+    
+    function getRandomWords() {
+      return wordsPool.sort(() => 0.5 - Math.random()).slice(0, 5);
+    }
+    
+    const grid = Array.from({ length: 10 }, () => Array(10).fill(''));
+    
+    function setupGame() {
+      words = getRandomWords();
+      fillGrid();
+      renderGrid();
+      logWordsInGrid();
+    }
+    
+    function logWordsInGrid() {
+      //console.log('Words present in the grid:');
+      words.forEach(word => {
+       // console.log(applySubstitution(word));
+      });
+    }
+    
+    function applySubstitution(word) {
+      return word
+        .split('')
+        .map(char => substitutionRules[char] || char)
+        .join('');
+    }
+    
+    function fillGrid() {
+      words.forEach(word => {
+        const substitutedWord = applySubstitution(word);
+        let placed = false;
+    
+        while (!placed) {
+          const direction = Math.random() > 0.5 ? 'horizontal' : 'vertical';
+          const row = Math.floor(Math.random() * (direction === 'horizontal' ? 10 : 10 - substitutedWord.length));
+          const col = Math.floor(Math.random() * (direction === 'vertical' ? 10 : 10 - substitutedWord.length));
+    
+          if (canPlaceWord(substitutedWord, row, col, direction)) {
+            placeWord(substitutedWord, row, col, direction);
+            placed = true;
+          }
+        }
+      });
+    
+     
+      for (let r = 0; r < 10; r++) {
+        for (let c = 0; c < 10; c++) {
+          if (!grid[r][c]) {
+            grid[r][c] = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+          }
+        }
+      }
+    }
+    
+    function canPlaceWord(word, row, col, direction) {
+      for (let i = 0; i < word.length; i++) {
+        if (direction === 'horizontal' && grid[row][col + i] !== '') return false;
+        if (direction === 'vertical' && grid[row + i][col] !== '') return false;
+      }
+      return true;
+    }
+    
+    function placeWord(word, row, col, direction) {
+      for (let i = 0; i < word.length; i++) {
+        if (direction === 'horizontal') {
+          grid[row][col + i] = word[i];
+        } else {
+          grid[row + i][col] = word[i];
+        }
+      }
+    }
+    
+    function renderGrid() {
+      wordGrid.innerHTML = '';
+      grid.forEach((row, rowIndex) => {
+        row.forEach((letter, colIndex) => {
+          const cell = document.createElement('div');
+          cell.textContent = letter.toUpperCase();
+          cell.dataset.row = rowIndex;
+          cell.dataset.col = colIndex;
+          cell.addEventListener('mousedown', () => startSelection(rowIndex, colIndex));
+          cell.addEventListener('mouseover', () => extendSelection(rowIndex, colIndex));
+          cell.addEventListener('mouseup', checkSelection);
+          wordGrid.appendChild(cell);
+        });
+      });
+    }
+    
+    function startSelection(row, col) {
+      clearSelection();
+      isMouseDown = true;
+      const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+      selectedCells.push(cell);
+      cell.classList.add('selected');
+     // console.log('Start selection:', selectedCells.map(c => c.textContent).join(''));
+    }
+    
+    function extendSelection(row, col) {
+      if (isMouseDown && selectedCells.length > 0) {
+        const firstCell = selectedCells[0];
+        const firstRow = parseInt(firstCell.dataset.row);
+        const firstCol = parseInt(firstCell.dataset.col);
+    
+        if (row === firstRow || col === firstCol) {
+          const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+          if (!selectedCells.includes(cell)) {
+            selectedCells.push(cell);
+            cell.classList.add('selected');
+           // console.log('Extend selection:', selectedCells.map(c => c.textContent).join(''));
+          }
+        }
+      }
+    }
+    
+    function checkSelection() {
+      isMouseDown = false;
+      const selectedWord = selectedCells.map(cell => cell.textContent.toLowerCase()).join('');
+      const originalWords = words.map(word => applySubstitution(word));
+    
+      //console.log('Checking selection:', selectedWord);
+    
+      if (originalWords.includes(selectedWord)) {
+        selectedCells.forEach(cell => {
+          cell.classList.add('correct');
+          cell.classList.remove('selected');
+        });
+        foundWords.add(selectedWord);
+       // console.log('Correct word found:', selectedWord);
+    
+       
+        if (foundWords.size === words.length) {
+          declareWin();
+        }
+      } else {
+        selectedCells.forEach(cell => {
+          cell.classList.add('wrong');
+          cell.classList.remove('selected');
+        });
+    
+        //console.log('Wrong selection, will revert in 1 second');
+    
+        setTimeout(() => {
+         // console.log('Reverting wrong class');
+          if (selectedCells.length === 0) {
+            //console.log('selectedCells is empty');
+          }
+          selectedCells.forEach(cell => {
+            cell.classList.remove('wrong'); 
+           // console.log('removed');
+            cell.classList.remove('selected'); 
+          });
+          clearSelection(); 
+        }, 1000); 
+      }
+    }
+    
+    function declareWin() {
+      console.log('Congratulations! You found all the words!');
+      const winMessageElement = document.getElementById('win-message');
+      winMessageElement.textContent = 'Congratulations! You found all the words!';
+    }
+    
+    function clearSelection() {
+      selectedCells = [];
+    }
+    
+</script>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marvel Sliding Puzzle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <!-- <link rel="stylesheet" href="styles.css"> -->
+</head>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+  font-family: 'Press Start 2P', cursive;
+  background-color: #111;
+  color: white;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+h1 {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.stats {
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.puzzle-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.puzzle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  grid-template-rows: repeat(3, 100px);
+  gap: 0;
+  width:300px;
+  height:300px;
+  background-color: #222;
+  padding: 0;
+
+  box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.2);
+}
+
+.puzzle-tile {
+  width: 100px;
+  height: 100px;
+  background-size: 300px 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  border: 2px solid white;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, background-color 0.3s ease;
+}
+
+.puzzle-tile:hover {
+  transform: scale(1.1);
+}
+
+.empty {
+  background: none;
+  border: none;
+}
+
+#winMessage {
+  font-size: 16px;
+  margin-top: 20px;
+  color: #00ff00;
+  display: none;
+  padding: 10px;
+  background: rgba(0, 255, 0, 0.2);
+  border: 2px solid #00ff00;
+  border-radius: 5px;
+}
+
+.hidden {
+  display: none;
+}
+
+</style>
+<body>
+  <div class="game-container">
+    <h1>Marvel Sliding Puzzle</h1>
+    
+    <div class="stats">
+      <p>Moves: <span id="moveCounter">0</span></p>
+      <p>Time: <span id="timer">0:00</span></p>
+    </div>
+
+    <div class="puzzle-grid" id="puzzleGrid"></div>
+
+  </div>
+  
+  <p id="winMessage" class="hidden"></p> 
+  <!-- <script src="script.js"></script> -->
+  <script>const puzzleGrid = document.getElementById("puzzleGrid");
+    const winMessage = document.getElementById("winMessage");
+    const moveCounter = document.getElementById("moveCounter");
+    const timerDisplay = document.getElementById("timer");
+    
+    const gridSize = 3;
+    const tileCount = gridSize * gridSize;
+    let tiles = [];
+    let moves = 0;
+    let startTime;
+    let timerInterval;
+    
+    
+    function createTiles() {
+      tiles = [];
+      for (let i = 0; i < tileCount; i++) {
+        const tile = document.createElement("div");
+        tile.classList.add("puzzle-tile");
+        tile.dataset.index = i;
+    
+        if (i < tileCount - 1) {
+          const x = (i % gridSize) * -100; 
+          const y = Math.floor(i / gridSize) * -100; 
+          tile.style.backgroundImage = `url('ironman.jpeg')`;
+          tile.style.backgroundPosition = `${x}px ${y}px`;
+        } else {
+          tile.classList.add("empty");
+        }
+    
+        tiles.push(tile);
+      }
+    }
+    
+    
+    function renderTiles() {
+      puzzleGrid.innerHTML = "";
+      tiles.forEach((tile, index) => {
+        puzzleGrid.appendChild(tile);
+        tile.onclick = () => tileClickHandler(index);
+      });
+    
+    
+      if (checkWinCondition()) {
+        clearInterval(timerInterval);
+        winMessage.classList.remove("hidden");
+        winMessage.style.display = "block";
+        winMessage.innerText = `🎉 Congratulations! You solved the puzzle in ${moves} moves and ${formatTime(Date.now() - startTime)}!`;
+      } else {
+        winMessage.classList.add("hidden");
+        winMessage.style.display = "none";
+      }
+    }
+    
+    
+    function tileClickHandler(index) {
+      if (!tiles[index].classList.contains("empty")) {
+        moveTile(index);
+        moves++;
+        moveCounter.innerText = `Moves: ${moves}`;
+      }
+    }
+    
+    
+    function canMove(index) {
+      const emptyIndex = tiles.findIndex(tile => tile.classList.contains("empty"));
+      const row = Math.floor(index / gridSize);
+      const col = index % gridSize;
+      const emptyRow = Math.floor(emptyIndex / gridSize);
+      const emptyCol = emptyIndex % gridSize;
+    
+      return (row === emptyRow && Math.abs(col - emptyCol) === 1) ||
+             (col === emptyCol && Math.abs(row - emptyRow) === 1);
+    }
+    
+    
+    function moveTile(index) {
+      const emptyIndex = tiles.findIndex(tile => tile.classList.contains("empty"));
+    
+      if (canMove(index)) {
+        [tiles[index], tiles[emptyIndex]] = [tiles[emptyIndex], tiles[index]];
+        renderTiles();
+      }
+    }
+    
+    
+    function shuffleTiles() {
+      for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+      }
+    
+      if (!isSolvable(tiles)) shuffleTiles();
+    }
+    
+    
+    function isSolvable(tiles) {
+      const tileArray = tiles.map(tile => tile.dataset.index);
+      const inversions = tileArray.reduce((count, currentValue, i) => {
+        if (currentValue === (tileCount - 1).toString()) return count;
+        for (let j = i + 1; j < tileArray.length; j++) {
+          if (tileArray[j] !== (tileCount - 1).toString() && currentValue > tileArray[j]) {
+            count++;
+          }
+        }
+        return count;
+      }, 0);
+    
+      return inversions % 2 === 0;
+    }
+    
+    
+    function checkWinCondition() {
+      return tiles.every((tile, index) => tile.dataset.index == index);
+    }
+    
+    
+    function startTimer() {
+      startTime = Date.now();
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timerDisplay.innerText = `Time: ${formatTime(Date.now() - startTime)}`;
+      }, 1000);
+    }
+    
+    
+    function formatTime(ms) {
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+    }
+    
+    
+    function initGame() {
+      createTiles();
+      shuffleTiles();
+      renderTiles();
+      moves = 0;
+      moveCounter.innerText = "Moves: 0";
+      startTimer();
+    }
+    
+    initGame();
+    
+    
+    
+    </script>
+</body>
+</html>
